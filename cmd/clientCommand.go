@@ -151,6 +151,18 @@ func (cc *ClientCommand) readString(params []string) (string, error) {
 	return value, nil
 }
 
+func (cc *ClientCommand) writeSnapshotToConsole(snapshot *vcon.Snapshot) error {
+	bytes, err := json.MarshalIndent(snapshot, "", "  ")
+	if err != nil {
+		return fmt.Errorf("Failed to serialize to JSON")
+	}
+
+	os.Stdout.Write(bytes)
+	os.Stdout.WriteString("\n")
+
+	return nil
+}
+
 func (cc *ClientCommand) writeVMInfoToConsole(vm *vcon.VirtualMachine) error {
 	vmi := cc.c.ReportVM(vm)
 	bytes, err := json.MarshalIndent(vmi, "", "  ")
