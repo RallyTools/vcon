@@ -61,22 +61,24 @@ func (c *Client) FindSnapshot(vm *VirtualMachine, name string, byRef bool) (*typ
 // _may_ be successful, but certain configurations will cause problems, and we are
 // not snapshotting the current memory state or quiescing the file system.
 // See https://docs.vmware.com/en/VMware-vSphere/6.5/com.vmware.vsphere.vm_admin.doc/GUID-53F65726-A23B-4CF0-A7D5-48E584B88613.html
-func (c *Client) SnapshotCreate(vm *VirtualMachine, name string) error {
+func (c *Client) SnapshotCreate(vm *VirtualMachine, name string) (*types.ManagedObjectReference, error) {
 	if c.Verbose {
 		fmt.Printf("Creating a VM snapshot...\n")
 	}
+
+	var res types.ManagedObjectReference
 
 	err := func() error {
 		ctx, cancelFn := context.WithTimeout(context.Background(), c.timeout)
 		defer cancelFn()
 
 		task, err := vm.VM.CreateSnapshot(ctx, name, "", false, false)
-		res, err := c.finishTask(ctx, task, err)
+		any, err := c.finishTask(ctx, task, err)
 		if err != nil {
 			return errors.Wrapf(err, "While snapshotting VM")
 		}
 
-		fmt.Printf("Got snapshot: %#v\n", res)
+		res = any.(types.ManagedObjectReference)
 
 		return nil
 	}()
@@ -85,14 +87,14 @@ func (c *Client) SnapshotCreate(vm *VirtualMachine, name string) error {
 		switch err := errors.Cause(err).(type) {
 		case *TimeoutExceededError:
 			// handle specifically
-			return fmt.Errorf("Timeout while attempting to snapshot VM")
+			return nil, fmt.Errorf("Timeout while attempting to snapshot VM")
 		default:
 			// unknown error
-			return errors.Wrap(err, "Got error while snapshotting a VM")
+			return nil, errors.Wrap(err, "Got error while snapshotting a VM")
 		}
 	}
 
-	return nil
+	return &res, nil
 }
 
 // SnapshotList retrieves all the snapshots for the provided VM, hierarchically

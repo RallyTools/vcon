@@ -450,6 +450,14 @@ func (c *Client) GetPowerState(vm *VirtualMachine) (PowerState, error) {
 	return ps, nil
 }
 
+func (c *Client) ReportSnapshot(mo *types.ManagedObjectReference) *Snapshot {
+	s := &Snapshot{
+		Ref: mo.Reference().Value,
+	}
+
+	return s
+}
+
 // ReportVM writes descriptive JSON data to the console
 func (c *Client) ReportVM(vm *VirtualMachine) *VirtualMachineInfo {
 	d := &VirtualMachineInfo{

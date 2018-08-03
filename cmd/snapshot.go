@@ -48,10 +48,13 @@ func createSnapshotCreateCommand() *cobra.Command {
 		}
 
 		name := cc.generateSnapshotName(name)
-		err = cc.c.SnapshotCreate(vm, name)
+		mo, err := cc.c.SnapshotCreate(vm, name)
 		if err != nil {
 			return err
 		}
+
+		snapshot := cc.c.ReportSnapshot(mo)
+		_ = cc.writeSnapshotToConsole(snapshot)
 
 		return nil
 	}
