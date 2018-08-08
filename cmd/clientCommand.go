@@ -8,12 +8,15 @@ import (
 	"os"
 	"strings"
 	"syscall"
+	"text/template"
 	"time"
 
 	"github.com/RallyTools/vcon"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/vjeantet/jodaTime"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -34,21 +37,52 @@ const (
 	vSphereKey           = "vsphere"
 )
 
+const (
+	defaultDateTimeFormat = "YYYY-MM-dd hh:mm:ss"
+	snapshotNameTemplate  = "Snapshot - {{ username }} - {{ now }}"
+	vmNameTemplate        = "{{ username }} - {{ now }}"
+)
+
 // ClientCommand embeds a cobra.Command and keeps a vcon.Client
 type ClientCommand struct {
 	cobra.Command
 	c *vcon.Client
+
+	nameTmpl *template.Template
 }
 
 // NewClientCommand creates a new ClientCommand and assigns the PreRunE on
 // the embedded cobra.Command to connect to the vSphere instance
 func NewClientCommand(use, shortDescription string) *ClientCommand {
+	fm := template.FuncMap{
+		"env": os.Getenv,
+		"now": func() string {
+			now := time.Now()
+			return jodaTime.Format(defaultDateTimeFormat, now)
+		},
+		"username": func() string {
+			username := viper.GetString(usernameKey)
+			atIndex := strings.Index(username, "@")
+			if atIndex != -1 {
+				username = username[:atIndex]
+			}
+			return username
+		},
+		"utcnow": func() string {
+			now := time.Now().UTC()
+			return jodaTime.Format(defaultDateTimeFormat, now)
+		},
+	}
+
+	tmpl := template.New("name_template").Funcs(fm)
+
 	cc := ClientCommand{
 		Command: cobra.Command{
 			Use:   use,
 			Short: shortDescription,
 		},
-		c: nil,
+		c:        nil,
+		nameTmpl: tmpl,
 	}
 
 	cc.Command.PreRunE = cc.preRunE
@@ -88,19 +122,25 @@ func (cc *ClientCommand) preRunE(_ *cobra.Command, _ []string) error {
 // generateVMName returns a new name for a VM.  This may be specified by the
 // `--name` flag to the `clone` verb, or if none is provided, one will be
 // created using the current time and user name
-func (cc *ClientCommand) generateVMName(providedName string) string {
-	if providedName != "" {
-		return providedName
+func (cc *ClientCommand) generateVMName(nameTemplate string) string {
+	if nameTemplate == "" {
+		nameTemplate = vmNameTemplate
 	}
 
-	now := time.Now()
-	username := viper.GetString(usernameKey)
-	atIndex := strings.Index(username, "@")
-	if atIndex != -1 {
-		username = username[:atIndex]
+	tmpl, err := cc.nameTmpl.Parse(nameTemplate)
+	if err != nil {
+		uuid, _ := uuid.NewUUID()
+		return fmt.Sprintf("VM %s (unparsable name template)", uuid.String())
 	}
 
-	return fmt.Sprintf("%s - %04d-%02d-%02d %02d:%02d:%02d", username, now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), now.Second())
+	var sb strings.Builder
+	err = tmpl.Execute(&sb, nil)
+	if err != nil {
+		uuid, _ := uuid.NewUUID()
+		return fmt.Sprintf("VM %s (name template execution failed)", uuid.String())
+	}
+
+	return sb.String()
 }
 
 func (cc *ClientCommand) generateSnapshotName(providedName string) string {
