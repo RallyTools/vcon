@@ -19,6 +19,7 @@ import (
 
 // Keys for configuration data
 const (
+	configurationKey     = "configuration"
 	datacenterKey        = "datacenter"
 	datastoreKey         = "datastore"
 	destinationKey       = "destination"
