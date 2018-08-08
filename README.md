@@ -18,6 +18,8 @@ The `test` command will attempt to make a connection to vSphere without performi
 
 Using the `clone` command, `vcon` can duplicate a template or VM, ensure that it is in a running state, and provide information to find and access the new VM.  The user must specify the destination folder using the `--destination` flag.  The user _may_ optionally a name using the `--name` flag, but a name will be generated if none was provided.
 
+The `--configuration` flag can be provided to reconfigure the VM after it's been cloned and before it is started.  The value is a JSON-formatted string; see [Configuration](#Configuration) for details.  Unlike the `configure` command, the string will not be read from STDIN when closing.
+
 The `--on` flag can be set to `false` to prevent the VM from starting automatically.
 
 ### Info
@@ -125,6 +127,7 @@ The `vcon` CLI uses [Cobra](https://github.com/spf13/cobra) and [Viper](https://
 | timeout | t | (all) | Y | Y | | `30` |
 | verbose | v | (all) |  | Y | | `false` |
 | config | | (all) | | | | `~/.vcon.[json\|yaml]` |
+| configuration | c | clone | | | |
 | destination | d | clone | | Y | |
 | name | n | clone, snapsnot-create | | | | (generated) |
 | on | | clone | | | | `true` |

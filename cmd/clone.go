@@ -1,13 +1,16 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 
+	"github.com/RallyTools/vcon"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 func createCloneCommand() *cobra.Command {
+	configuration := ""
 	name := ""
 	on := true
 
@@ -31,6 +34,24 @@ func createCloneCommand() *cobra.Command {
 			return err
 		}
 
+		if configuration != "" {
+			vmc := &vcon.VirtualMachineConfiguration{}
+			err = json.Unmarshal([]byte(configuration), vmc)
+			if err != nil {
+				// TODO: track errors
+			}
+
+			vm, err := cc.c.FindVM(newVM.Ref.Value, true, "network")
+			if err != nil {
+				return err
+			}
+
+			err = cc.c.Configure(vm, vmc)
+			if err != nil {
+				// TODO: track errors
+			}
+		}
+
 		if on {
 			cc.c.EnsureOn(newVM)
 			if err != nil {
@@ -40,6 +61,8 @@ func createCloneCommand() *cobra.Command {
 
 		return cc.writeVMInfoToConsole(newVM)
 	}
+
+	cc.Flags().StringVarP(&configuration, configurationKey, "c", "", "JSON block containing VM configuration")
 
 	cc.Flags().StringP(destinationKey, "d", "", "destination folder for new VM")
 	viper.BindPFlag(destinationKey, cc.Flags().Lookup(destinationKey))
