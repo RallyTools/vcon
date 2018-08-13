@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/user"
 	"strings"
 	"syscall"
 	"text/template"
@@ -54,23 +55,40 @@ type ClientCommand struct {
 // NewClientCommand creates a new ClientCommand and assigns the PreRunE on
 // the embedded cobra.Command to connect to the vSphere instance
 func NewClientCommand(use, shortDescription string) *ClientCommand {
+	formatTime := func(now time.Time, format ...string) string {
+		formatter := defaultDateTimeFormat
+		if len(format) > 0 {
+			formatter = format[0]
+		}
+		return jodaTime.Format(formatter, now)
+	}
+	trimAtsign := func(username string) string {
+		atIndex := strings.Index(username, "@")
+		if atIndex != -1 {
+			username = username[:atIndex]
+		}
+		return username
+	}
+
 	fm := template.FuncMap{
-		"env": os.Getenv,
-		"now": func() string {
-			now := time.Now()
-			return jodaTime.Format(defaultDateTimeFormat, now)
+		"Env": os.Getenv,
+		"Now": func(format ...string) string {
+			return formatTime(time.Now(), format...)
 		},
-		"username": func() string {
-			username := viper.GetString(usernameKey)
-			atIndex := strings.Index(username, "@")
-			if atIndex != -1 {
-				username = username[:atIndex]
+		"Username": func() string {
+			usr, err := user.Current()
+			if err != nil {
+				// Failed to get the current user
+				return "Unknown user"
 			}
-			return username
+			return trimAtsign(usr.Name)
 		},
-		"utcnow": func() string {
-			now := time.Now().UTC()
-			return jodaTime.Format(defaultDateTimeFormat, now)
+		"UtcNow": func(format ...string) string {
+			return formatTime(time.Now().UTC(), format...)
+		},
+		"VsUsername": func() string {
+			username := viper.GetString(usernameKey)
+			return trimAtsign(username)
 		},
 	}
 
