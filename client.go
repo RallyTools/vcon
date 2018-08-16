@@ -24,10 +24,17 @@ const Version = "0.3.0"
 type PowerState string
 
 const (
+	// PoweredOff indicates that the VM is turned off
 	PoweredOff PowerState = "powered_off"
-	PoweredOn  PowerState = "powered_on"
-	Suspended  PowerState = "suspended"
-	Unknown    PowerState = "unknown"
+
+	// PoweredOn indicates that the VM is running
+	PoweredOn PowerState = "powered_on"
+
+	// Suspended indicates that the VM is on but not running
+	Suspended PowerState = "suspended"
+
+	// Unknown indicates that the power state was not determined
+	Unknown PowerState = "unknown"
 )
 
 // Client represents a connection to vSphere

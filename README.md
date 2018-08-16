@@ -139,7 +139,7 @@ The `vcon` CLI uses [Cobra](https://github.com/spf13/cobra) and [Viper](https://
 
 ## Templates
 
-The `name` parameter for the `clone` and `snapshot create` can accept a Go template string.
+The `name` parameter for the `clone` and `snapshot create` can accept a Go template string.  The default template fills in the vSphere user's name and a local datetime stamp.  For example, the VM name template defaults to `{{ username }} - {{ now }}`.
 
 ### Functions
 
@@ -147,7 +147,7 @@ On top of Go's [built-in template functions](https://golang.org/pkg/text/templat
 
 #### Env
 
-`Env` takes one argument and returns the value of an environment variable whose name is a case-sensitively match for the arguemnt.
+`Env` takes one argument and returns the value of an environment variable whose name is a case-sensitive match for the arguement.
 
 #### Now
 

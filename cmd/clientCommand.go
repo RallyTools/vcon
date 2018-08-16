@@ -145,35 +145,32 @@ func (cc *ClientCommand) generateVMName(nameTemplate string) string {
 		nameTemplate = vmNameTemplate
 	}
 
-	tmpl, err := cc.nameTmpl.Parse(nameTemplate)
+	return cc.generateName(nameTemplate)
+}
+
+func (cc *ClientCommand) generateSnapshotName(nameTemplate string) string {
+	if nameTemplate == "" {
+		nameTemplate = snapshotNameTemplate
+	}
+
+	return cc.generateName(nameTemplate)
+}
+
+func (cc *ClientCommand) generateName(template string) string {
+	tmpl, err := cc.nameTmpl.Parse(template)
 	if err != nil {
 		uuid, _ := uuid.NewUUID()
-		return fmt.Sprintf("VM %s (unparsable name template)", uuid.String())
+		return fmt.Sprintf("Snapshot %s", uuid.String())
 	}
 
 	var sb strings.Builder
 	err = tmpl.Execute(&sb, nil)
 	if err != nil {
 		uuid, _ := uuid.NewUUID()
-		return fmt.Sprintf("VM %s (name template execution failed)", uuid.String())
+		return fmt.Sprintf("Snapshot %s", uuid.String())
 	}
 
 	return sb.String()
-}
-
-func (cc *ClientCommand) generateSnapshotName(providedName string) string {
-	if providedName != "" {
-		return providedName
-	}
-
-	now := time.Now()
-	username := viper.GetString(usernameKey)
-	atIndex := strings.Index(username, "@")
-	if atIndex != -1 {
-		username = username[:atIndex]
-	}
-
-	return fmt.Sprintf("Snapshot - %s - %04d-%02d-%02d %02d:%02d:%02d", username, now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), now.Second())
 }
 
 func (cc *ClientCommand) readString(params []string) (string, error) {
