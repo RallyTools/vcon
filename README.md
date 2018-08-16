@@ -44,7 +44,7 @@ An example result:
   "ips": [],
   "isRunning": false,
   "path": "/Engineering/TeamSharks/temporary VMs/bob - 2018-05-09 14:47:59",
-  "ref": "vm-1127"
+  "ref": "vm-139"
 }
 ```
 
@@ -136,6 +136,51 @@ The `vcon` CLI uses [Cobra](https://github.com/spf13/cobra) and [Viper](https://
 | overwrite | | note | | | | `false` |
 | snapshotIsRef| | snapshot-remove, snapshot-revert | | | | `false` |
 | targetIsRef | | configure, destroy, info, note, power, snapshot-* | | | | `false` |
+
+## Templates
+
+The `name` parameter for the `clone` and `snapshot create` can accept a Go template string.  The default template fills in the vSphere user's name and a local datetime stamp.  For example, the VM name template defaults to `{{ username }} - {{ now }}`.
+
+### Functions
+
+On top of Go's [built-in template functions](https://golang.org/pkg/text/template/), `vcon` comes with some additional functionality added.
+
+#### Env
+
+`Env` takes one argument and returns the value of an environment variable whose name is a case-sensitive match for the arguement.
+
+#### Now
+
+`Now` returns the local time.  `Now` also accepts an optional argument, which can describe the time format using the [Joda time format](http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat.html).
+
+#### Username
+
+`Username` returns the logged-in user's name, as per the [`User` object](https://golang.org/pkg/os/user/).  If this is in an email format, only the name section is returned (i.e., `foo` in `foo@bar.com`).
+
+#### UtcNow
+
+`UtcNow` returns the UTC time.  `UtcNow` also accepts an optional argument, which can describe the time format using the [Joda time format](http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat.html).
+
+#### VsUsername
+
+`VsUsername` returns the name of the user which is used to communicate with vSphere.  If this is in an email format, only the name section is returned (i.e., `foo` in `foo@bar.com`).
+
+### Examples
+
+``` sh
+vcon clone "/Engineering/templates/Deployment Template" --on=false --name='TEST {{ Username }} {{ Now `YYYY` }} {{ UtcNow }}'
+# {
+#   "configuration": {
+#     "cpus": 2,
+#     "memory": 4096,
+#     "network": "VLAN3000"
+#   },
+#   "ips": [],
+#   "isRunning": false,
+#   "path": "/Engineering/TeamSharks/temporary VMs/TEST Brousseau 2018 2018-08-13 04:54:22",
+#   "ref": "vm-139"
+# }
+```
 
 ## Limitations
 

@@ -6,14 +6,18 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/user"
 	"strings"
 	"syscall"
+	"text/template"
 	"time"
 
 	"github.com/RallyTools/vcon"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/vjeantet/jodaTime"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -34,21 +38,69 @@ const (
 	vSphereKey           = "vsphere"
 )
 
+const (
+	defaultDateTimeFormat = "YYYY-MM-dd hh:mm:ss"
+	snapshotNameTemplate  = "Snapshot - {{ username }} - {{ now }}"
+	vmNameTemplate        = "{{ username }} - {{ now }}"
+)
+
 // ClientCommand embeds a cobra.Command and keeps a vcon.Client
 type ClientCommand struct {
 	cobra.Command
 	c *vcon.Client
+
+	nameTmpl *template.Template
 }
 
 // NewClientCommand creates a new ClientCommand and assigns the PreRunE on
 // the embedded cobra.Command to connect to the vSphere instance
 func NewClientCommand(use, shortDescription string) *ClientCommand {
+	formatTime := func(now time.Time, format ...string) string {
+		formatter := defaultDateTimeFormat
+		if len(format) > 0 {
+			formatter = format[0]
+		}
+		return jodaTime.Format(formatter, now)
+	}
+	trimAtsign := func(username string) string {
+		atIndex := strings.Index(username, "@")
+		if atIndex != -1 {
+			username = username[:atIndex]
+		}
+		return username
+	}
+
+	fm := template.FuncMap{
+		"Env": os.Getenv,
+		"Now": func(format ...string) string {
+			return formatTime(time.Now(), format...)
+		},
+		"Username": func() string {
+			usr, err := user.Current()
+			if err != nil {
+				// Failed to get the current user
+				return "Unknown user"
+			}
+			return trimAtsign(usr.Name)
+		},
+		"UtcNow": func(format ...string) string {
+			return formatTime(time.Now().UTC(), format...)
+		},
+		"VsUsername": func() string {
+			username := viper.GetString(usernameKey)
+			return trimAtsign(username)
+		},
+	}
+
+	tmpl := template.New("name_template").Funcs(fm)
+
 	cc := ClientCommand{
 		Command: cobra.Command{
 			Use:   use,
 			Short: shortDescription,
 		},
-		c: nil,
+		c:        nil,
+		nameTmpl: tmpl,
 	}
 
 	cc.Command.PreRunE = cc.preRunE
@@ -88,34 +140,37 @@ func (cc *ClientCommand) preRunE(_ *cobra.Command, _ []string) error {
 // generateVMName returns a new name for a VM.  This may be specified by the
 // `--name` flag to the `clone` verb, or if none is provided, one will be
 // created using the current time and user name
-func (cc *ClientCommand) generateVMName(providedName string) string {
-	if providedName != "" {
-		return providedName
+func (cc *ClientCommand) generateVMName(nameTemplate string) string {
+	if nameTemplate == "" {
+		nameTemplate = vmNameTemplate
 	}
 
-	now := time.Now()
-	username := viper.GetString(usernameKey)
-	atIndex := strings.Index(username, "@")
-	if atIndex != -1 {
-		username = username[:atIndex]
-	}
-
-	return fmt.Sprintf("%s - %04d-%02d-%02d %02d:%02d:%02d", username, now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), now.Second())
+	return cc.generateName(nameTemplate)
 }
 
-func (cc *ClientCommand) generateSnapshotName(providedName string) string {
-	if providedName != "" {
-		return providedName
+func (cc *ClientCommand) generateSnapshotName(nameTemplate string) string {
+	if nameTemplate == "" {
+		nameTemplate = snapshotNameTemplate
 	}
 
-	now := time.Now()
-	username := viper.GetString(usernameKey)
-	atIndex := strings.Index(username, "@")
-	if atIndex != -1 {
-		username = username[:atIndex]
+	return cc.generateName(nameTemplate)
+}
+
+func (cc *ClientCommand) generateName(template string) string {
+	tmpl, err := cc.nameTmpl.Parse(template)
+	if err != nil {
+		uuid, _ := uuid.NewUUID()
+		return fmt.Sprintf("Snapshot %s", uuid.String())
 	}
 
-	return fmt.Sprintf("Snapshot - %s - %04d-%02d-%02d %02d:%02d:%02d", username, now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), now.Second())
+	var sb strings.Builder
+	err = tmpl.Execute(&sb, nil)
+	if err != nil {
+		uuid, _ := uuid.NewUUID()
+		return fmt.Sprintf("Snapshot %s", uuid.String())
+	}
+
+	return sb.String()
 }
 
 func (cc *ClientCommand) readString(params []string) (string, error) {
