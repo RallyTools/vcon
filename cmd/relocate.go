@@ -23,6 +23,10 @@ func createRelocateCommand() *cobra.Command {
 			return err
 		}
 
+		if name != "" {
+			name = cc.generateVMName(name)
+		}
+
 		err = cc.c.Relocate(vm, name, destination)
 		if err != nil {
 			return err
