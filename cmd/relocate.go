@@ -31,9 +31,9 @@ func createRelocateCommand() *cobra.Command {
 		return nil
 	}
 
-	cc.Flags().StringVarP(&destination, destinationKey, "d", destination, "destination folder for VM")
+	cc.Flags().StringVarP(&destination, destinationKey, "d", destination, "destination folder for VM; if no destination is specified, the VM will not move")
 
-	cc.Flags().StringVarP(&name, nameKey, "n", name, "name of VM; if no name is specified, one will be generated.")
+	cc.Flags().StringVarP(&name, nameKey, "n", name, "name of VM; if no name is specified, the name will not change")
 
 	cc.Flags().BoolVar(&targetIsRef, "targetIsRef", targetIsRef, "TARGET parameter is the target VM's uuid")
 
