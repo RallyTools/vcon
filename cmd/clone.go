@@ -25,7 +25,7 @@ func createCloneCommand() *cobra.Command {
 			return err
 		}
 
-		name := cc.generateVMName(name)
+		name = cc.generateVMName(name)
 		destination := viper.GetString(destinationKey)
 		resourcePool := viper.GetString(resourcePoolKey)
 
