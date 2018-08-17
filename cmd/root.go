@@ -24,7 +24,7 @@ func InitializeCommands() *cobra.Command {
 		createInitCommand(),
 		createNoteCommand(),
 		createPowerCommand(),
-		createRenameCommand(),
+		createRelocateCommand(),
 		createSnapshotCommand(),
 		createTestCommand(),
 		createVersionCommand(),

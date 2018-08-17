@@ -78,6 +78,10 @@ vcon configure $TARGET /tmp/machine.json
 
 Using the `note` command, `vcon` can append a new piece of text to a VM in vSphere.  The `--overwrite` flag can be used to replace any existing notes.
 
+### Moving and renaming
+
+Using the `relocate` command, `vcon` can rename a VM and/or move it into a different folder.  The target location must still be in the same data store and data center.  Like the `clone` command, the name and destination are derived from `--name` and `--destination` (or `-n` and `-d`) options.  Unlike the `clone` command, there is no default for the name option, and for the destination, any value in a configuration file is ignored.
+
 ### Power cycling
 
 Using the `power` command, `vcon` can turn on, turn off, or suspend a VM.
@@ -128,14 +132,18 @@ The `vcon` CLI uses [Cobra](https://github.com/spf13/cobra) and [Viper](https://
 | verbose | v | (all) |  | Y | | `false` |
 | config | | (all) | | | | `~/.vcon.[json\|yaml]` |
 | configuration | c | clone | | | |
-| destination | d | clone | | Y | |
-| name | n | clone, snapsnot-create | | | | (generated) |
+| destination | d | clone, relocate | | Y (*) | |
+| name | n | clone, relocate, snapsnot-create | | | | (generated) (**) |
 | on | | clone | | | | `true` |
 | resourcepool | | clone | Y | Y | Y | |
 | force | f | destroy | | | | `false` |
 | overwrite | | note | | | | `false` |
 | snapshotIsRef| | snapshot-remove, snapshot-revert | | | | `false` |
 | targetIsRef | | configure, destroy, info, note, power, snapshot-* | | | | `false` |
+
+`*` The destination parameter for the `relocate` command is not taken from the config file
+
+`**` The name parameter is for the `relocate` command is not generated 
 
 ## Templates
 
@@ -243,6 +251,7 @@ if [[ $SUCCESS == 0 ]];
 	# Power destroy the VM
 	vcon destroy $TARGET --targetIsRef --force
 else
+  vcon relocate $TARGET --targetIsRef --destination "/Engineering/TeamSharks/Failed tests"
 	vcon note $TARGET "Test failed" --targetIsRef
 fi
 ```

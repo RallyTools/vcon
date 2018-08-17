@@ -2,13 +2,12 @@ package cmd
 
 import "github.com/spf13/cobra"
 
-func createRenameCommand() *cobra.Command {
+func createRelocateCommand() *cobra.Command {
 	destination := ""
 	name := ""
 	targetIsRef := false
 
-	cc := NewClientCommand("rename TARGET", "Moves and/or renames the TARGET vm")
-	cc.Aliases = []string{"move"}
+	cc := NewClientCommand("relocate TARGET", "Moves and/or renames the TARGET vm")
 	cc.Args = cobra.ExactArgs(1)
 
 	cc.RunE = func(_ *cobra.Command, params []string) error {

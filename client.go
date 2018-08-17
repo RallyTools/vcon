@@ -18,7 +18,7 @@ import (
 )
 
 // Version is the version of the application and API
-const Version = "0.3.0"
+const Version = "0.4.0"
 
 // PowerState describes whether a VM is on, off, or suspended
 type PowerState string
@@ -482,11 +482,6 @@ func (c *Client) Relocate(vm *VirtualMachine, name, destination string) error {
 			}
 
 			task, err := objFolder.MoveInto(ctx, []types.ManagedObjectReference{vm.Ref})
-
-			// vmrs := types.VirtualMachineRelocateSpec{}
-			// folderMoRef := objFolder.Reference()
-			// vmrs.Folder = &folderMoRef
-			// task, err := vm.VM.Relocate(ctx, vmrs, types.VirtualMachineMovePriorityDefaultPriority)
 			_, err = c.finishTask(ctx, task, err)
 			if err = c.checkErr(ctx, err); err != nil {
 				return err
