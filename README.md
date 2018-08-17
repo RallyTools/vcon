@@ -251,7 +251,7 @@ if [[ $SUCCESS == 0 ]];
 	# Power destroy the VM
 	vcon destroy $TARGET --targetIsRef --force
 else
-  vcon relocate $TARGET --targetIsRef --destination "/Engineering/TeamSharks/Failed tests"
+	vcon relocate $TARGET --targetIsRef --destination "/Engineering/TeamSharks/Failed tests"
 	vcon note $TARGET "Test failed" --targetIsRef
 fi
 ```
