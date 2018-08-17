@@ -18,7 +18,7 @@ import (
 )
 
 // Version is the version of the application and API
-const Version = "0.5.0"
+const Version = "0.6.0"
 
 // PowerState describes whether a VM is on, off, or suspended
 type PowerState string
@@ -358,6 +358,14 @@ func (c *Client) EnsureOff(vm *VirtualMachine) error {
 		ctx, cancelFn := context.WithTimeout(context.Background(), c.timeout)
 		defer cancelFn()
 
+		vmps, err := vm.VM.PowerState(ctx)
+		if err != nil {
+			return errors.Wrapf(err, "While checking current power state")
+		}
+		if vmps == types.VirtualMachinePowerStatePoweredOff {
+			return nil
+		}
+
 		task, err := vm.VM.PowerOff(ctx)
 		_, err = c.finishTask(ctx, task, err)
 		if err != nil {
@@ -390,6 +398,14 @@ func (c *Client) EnsureOn(vm *VirtualMachine) error {
 	err := func() error {
 		ctx, cancelFn := context.WithTimeout(context.Background(), c.timeout)
 		defer cancelFn()
+
+		vmps, err := vm.VM.PowerState(ctx)
+		if err != nil {
+			return errors.Wrapf(err, "While checking current power state")
+		}
+		if vmps == types.VirtualMachinePowerStatePoweredOn {
+			return nil
+		}
 
 		task, err := vm.VM.PowerOn(ctx)
 		_, err = c.finishTask(ctx, task, err)
@@ -612,6 +628,14 @@ func (c *Client) Suspend(vm *VirtualMachine) error {
 	err := func() error {
 		ctx, cancelFn := context.WithTimeout(context.Background(), c.timeout)
 		defer cancelFn()
+
+		vmps, err := vm.VM.PowerState(ctx)
+		if err != nil {
+			return errors.Wrapf(err, "While checking current power state")
+		}
+		if vmps == types.VirtualMachinePowerStateSuspended {
+			return nil
+		}
 
 		task, err := vm.VM.Suspend(ctx)
 		_, err = c.finishTask(ctx, task, err)
