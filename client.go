@@ -18,7 +18,7 @@ import (
 )
 
 // Version is the version of the application and API
-const Version = "0.3.0"
+const Version = "0.4.0"
 
 // PowerState describes whether a VM is on, off, or suspended
 type PowerState string
@@ -455,6 +455,56 @@ func (c *Client) GetPowerState(vm *VirtualMachine) (PowerState, error) {
 	}
 
 	return ps, nil
+}
+
+// Relocate will move the VM into a new destination folder, and/or change its
+// name
+func (c *Client) Relocate(vm *VirtualMachine, name, destination string) error {
+	err := func() error {
+		ctx, cancelFn := context.WithTimeout(context.Background(), c.timeout)
+		defer cancelFn()
+
+		if name != "" {
+			task, err := vm.VM.Rename(ctx, name)
+			_, err = c.finishTask(ctx, task, err)
+			if err = c.checkErr(ctx, err); err != nil {
+				return err
+			}
+		}
+
+		if destination != "" {
+			fmt.Printf("Have destination '%s'\n", destination)
+			inventoryDestination := c.makeInventoryPath(destination)
+			fmt.Printf("inventoryDestination: '%s'\n", inventoryDestination)
+			objFolder, err := c.Finder.Folder(ctx, inventoryDestination)
+			if err := c.checkErr(ctx, err); err != nil {
+				return errors.Wrapf(err, "While getting folder named '%s'", destination)
+			}
+
+			task, err := objFolder.MoveInto(ctx, []types.ManagedObjectReference{vm.Ref})
+			_, err = c.finishTask(ctx, task, err)
+			if err = c.checkErr(ctx, err); err != nil {
+				return err
+			}
+
+			fmt.Printf("Relocate complete\n")
+		}
+
+		return nil
+	}()
+
+	if err != nil {
+		switch err := errors.Cause(err).(type) {
+		case *TimeoutExceededError:
+			// handle specifically
+			return fmt.Errorf("Timeout while attempting to rename and/or move VM")
+		default:
+			// unknown error
+			return errors.Wrap(err, "Got error while attempting to rename and/or move VM")
+		}
+	}
+
+	return err
 }
 
 func (c *Client) ReportSnapshot(mo *types.ManagedObjectReference) *Snapshot {
