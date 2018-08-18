@@ -4,7 +4,7 @@
 
 ## About
 
-`vcon` is designed to help users script actions against a vSphere system, so that they may clone, power-cycle, and destroy VMs in an automated fashion.
+`vcon` is designed to help users write scripts which perform actions against a vSphere system, so that they may clone, power-cycle, and destroy VMs in an automated fashion.
 
 ## Uses
 
@@ -16,7 +16,7 @@ The `test` command will attempt to make a connection to vSphere without performi
 
 ### Cloning
 
-Using the `clone` command, `vcon` can duplicate a template or VM, ensure that it is in a running state, and provide information to find and access the new VM.  The user must specify the destination folder using the `--destination` flag.  The user _may_ optionally a name using the `--name` flag, but a name will be generated if none was provided.
+Using the `clone` command, `vcon` can duplicate a template or VM, ensure that it is in a running state, and provide information to find and access the new VM.  The user must specify the destination folder using the `--destination` flag.  The user _may_ optionally specify a name using the `--name` flag, but a name will be generated if none was provided.  The name may be a Go template string; see [Templates](#Templates).
 
 The `--configuration` flag can be provided to reconfigure the VM after it's been cloned and before it is started.  The value is a JSON-formatted string; see [Configuration](#Configuration) for details.  Unlike the `configure` command, the string will not be read from STDIN when closing.
 
@@ -84,7 +84,7 @@ Using the `relocate` command, `vcon` can rename a VM and/or move it into a diffe
 
 ### Power cycling
 
-Using the `power` command, `vcon` can turn on, turn off, or suspend a VM.
+Using the `power` command, `vcon` can turn on, turn off, or suspend a VM.  The power command uses an additional argument, `on`, `off`, or `suspend` to indicate the desired state.
 
 ### Snapshoting _(experimental)_
 
@@ -151,7 +151,7 @@ The `name` parameter for the `clone` and `snapshot create` can accept a Go templ
 
 ### Functions
 
-On top of Go's [built-in template functions](https://golang.org/pkg/text/template/), `vcon` comes with some additional functionality added.
+On top of Go's [built-in template functions](https://golang.org/pkg/text/template/), `vcon` comes with some extra functionality added.
 
 #### Env
 
@@ -198,7 +198,11 @@ vcon clone "/Engineering/templates/Deployment Template" --on=false --name='TEST 
 
 `vcon` is not designed for extensive VM alterations.  The CPU and memory can be changed, and the attached network may be changed.  If there are multiple network adapters, it is assumed that all network adapters will be changed to the same network.  Other VM features such as sound device, optical drive, and disk configuration cannot be changed with this tool.
 
-## Examples
+`vcon` has been developed against an ESXi 6.5 system & API.  No testing has been done older versions or other VMware products.  Finally, `vcon` is not associated with VMware aside from the usage of the [govmomi](https://github.com/vmware/govmomi) library.
+
+## End to end example
+
+This example uses the [`jq`](https://stedolan.github.io/jq/) library for JSON parsing.  This example is meant to demonstrate how a user may script the cloning, reconfiguration, and powering of a VM before executing a test.  After the test, the VM is either torn down, or moved into a separate folder for post-test examination.
 
 ``` sh
 #!/bin/bash
@@ -212,11 +216,11 @@ RESULTS=$(vcon clone "/Engineering/templates/Deployment Template" --destination 
 
 # RESULTS is a JSON block, shaped like...
 # {
-#   "configuration": {
-#     "cpus": 2,
-#     "memory": 4096,
-#     "network": "VLAN3000"
-#   },
+# 	"configuration": {
+# 		"cpus": 2,
+# 		"memory": 4096,
+# 		"network": "VLAN3000"
+# 	},
 # 	"ips": [],
 # 	"isRunning": false,
 # 	"path": "/Engineering/TeamSharks/temporary VMs/MyName - 2018/04/29 20:44:22"
@@ -230,7 +234,7 @@ TARGET=$(echo $RESULTS | jq -r ".ref")
 vcon note $TARGET "VM generated for Team Shark acceptance test, feature F1234" --targetIsRef
 
 # Change the VM's hardware configuration using HEREDOC
-vcon configure $TARGET <<EOF
+vcon configure $TARGET --targetIsRef << EOF
 {
 	"cpus": 6,
 	"memory": 4096
@@ -238,20 +242,21 @@ vcon configure $TARGET <<EOF
 EOF
 
 # Power up VM
-vcon power up $TARGET --targetIsRef
+vcon power on $TARGET --targetIsRef
 
 # Get the IP address
 IP=$(vcon info $TARGET --targetIsRef | jq -r ".ips | .[0]")
 
 # Execute some automated tests
-$(REMOTE_IP=$IP testcafe ...)
+REMOTE_IP=$IP testcafe ...
 SUCCESS=$?
 
 if [[ $SUCCESS == 0 ]];
-	# Power destroy the VM
+	# Destroy the VM; the force option will power it down first.
 	vcon destroy $TARGET --targetIsRef --force
 else
 	vcon relocate $TARGET --targetIsRef --destination "/Engineering/TeamSharks/Failed tests"
 	vcon note $TARGET "Test failed" --targetIsRef
+	vcon power off $TARGET --targetIsRef
 fi
 ```
