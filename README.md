@@ -84,7 +84,7 @@ Using the `relocate` command, `vcon` can rename a VM and/or move it into a diffe
 
 ### Power cycling
 
-Using the `power` command, `vcon` can turn on, turn off, or suspend a VM.  The power command uses an additional argument, `on`, `off`, or `suspend` to indicate the desired state.
+Using the `power` command, `vcon` can turn on, turn off, or suspend a VM.  The power command uses an additional argument, `on`, `off`, or `suspend`, to indicate the desired state.
 
 ### Snapshoting _(experimental)_
 
