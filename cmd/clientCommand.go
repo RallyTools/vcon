@@ -40,8 +40,8 @@ const (
 
 const (
 	defaultDateTimeFormat = "YYYY-MM-dd hh:mm:ss"
-	snapshotNameTemplate  = "Snapshot - {{ username }} - {{ now }}"
-	vmNameTemplate        = "{{ username }} - {{ now }}"
+	snapshotNameTemplate  = "Snapshot - {{ Username }} - {{ Now }}"
+	vmNameTemplate        = "{{ Username }} - {{ Now }}"
 )
 
 // ClientCommand embeds a cobra.Command and keeps a vcon.Client
@@ -159,15 +159,17 @@ func (cc *ClientCommand) generateSnapshotName(nameTemplate string) string {
 func (cc *ClientCommand) generateName(template string) string {
 	tmpl, err := cc.nameTmpl.Parse(template)
 	if err != nil {
+		fmt.Printf("Template parsing error: %s\n", err.Error())
 		uuid, _ := uuid.NewUUID()
-		return fmt.Sprintf("Snapshot %s", uuid.String())
+		return fmt.Sprintf("%s", uuid.String())
 	}
 
 	var sb strings.Builder
 	err = tmpl.Execute(&sb, nil)
 	if err != nil {
+		fmt.Printf("Template execution error: %s\n", err.Error())
 		uuid, _ := uuid.NewUUID()
-		return fmt.Sprintf("Snapshot %s", uuid.String())
+		return fmt.Sprintf("%s", uuid.String())
 	}
 
 	return sb.String()

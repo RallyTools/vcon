@@ -18,7 +18,7 @@ import (
 )
 
 // Version is the version of the application and API
-const Version = "0.6.0"
+const Version = "0.7.0"
 
 // PowerState describes whether a VM is on, off, or suspended
 type PowerState string
