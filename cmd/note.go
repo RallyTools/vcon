@@ -26,7 +26,7 @@ func createNoteCommand() *cobra.Command {
 		target := params[0]
 
 		// Get a reader; either Stdin or a specified path
-		note, err := cc.readString(params)
+		note, err := cc.readString(params[1:])
 		if err != nil {
 			return err
 		}
